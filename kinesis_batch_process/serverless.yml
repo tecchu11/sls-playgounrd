@@ -1,0 +1,104 @@
+service: KinesisBatchProcess
+frameworkVersion: '3'
+
+provider:
+  name: aws
+  runtime: python3.10
+  runtimeManagement: auto
+  stage: ${opt:stage}
+  region: ap-northeast-1
+  logRetentionInDays: 30
+  tags:
+    author: tecchu11
+  stackTags:
+    author: tecchu11
+  deploymentBucket:
+    tags:
+      author: tecchu11
+  environment:
+    STAGE: ${opt:stage}
+    LOG_LEVEL: INFO
+
+params:
+  local:
+    requirements_file: requirements/requirements_local.txt
+  dev:
+    requirements_file: requirements/requirements.txt
+
+package:
+  patterns:
+    - "!**"
+    - "src/**"
+
+functions:
+  kinesis-batch-process:
+    handler: src/handler.handler
+    timeout: 10
+    events:
+      - stream:
+          type: kinesis
+          arn:
+            Fn::GetAtt: [ FooStream, Arn ]
+          enabled: true
+          batchSize: 100
+          batchWindow: 5
+          bisectBatchOnFunctionError: true
+          maximumRetryAttempts: 3
+          functionResponseType: ReportBatchItemFailures
+          startingPosition: LATEST
+
+    vpc:
+      securityGroupIds:
+        - Fn::GetAtt: [ KinesisBatchProcessSg, GroupId ]
+      subnetIds:
+        - subnet-befedf16
+        - subnet-1108a9b6
+        - subnet-5bad9799
+#    layers: # Please comment out when deploy to localstack.
+#      - arn:aws:lambda:${aws:region}:017000801446:layer:AWSLambdaPowertoolsPythonV2:34
+    environment:
+      POWERTOOLS_SERVICE_NAME: DemoHelloFunction
+
+custom:
+  alerts:
+    alarms:
+      - functionErrors
+  localstack:
+    stages:
+      - local
+    host: http://localhost
+    edgePort: 4566
+    autostart: false
+  prune:
+    automatic: true
+    number: 3
+  pythonRequirements:
+    fileName: ${param:requirements_file}
+    usePipenv: false
+
+resources:
+  Resources:
+    FooStream:
+      Type: AWS::Kinesis::Stream
+      Properties:
+        Name: foo-stream
+        RetentionPeriodHours: 24
+        StreamEncryption:
+          EncryptionType: KMS
+          KeyId: alias/aws/kinesis
+        StreamModeDetails:
+          StreamMode: ON_DEMAND
+    KinesisBatchProcessSg:
+      Type: AWS::EC2::SecurityGroup
+      Properties:
+        GroupDescription: The security group for kinesis-batch-proces-function
+        GroupName: kinesis-batch-process-function-sg
+        SecurityGroupEgress:
+          - IpProtocol: tcp
+            CidrIp: 0.0.0.0/0
+
+plugins:
+  - serverless-localstack
+  - serverless-plugin-aws-alerts
+  - serverless-prune-plugin
+  - serverless-python-requirements
