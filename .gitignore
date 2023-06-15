@@ -1,0 +1,20 @@
+### Python ###
+# cache
+__pycache__
+# Environments
+.venv
+# mypy
+.mypy_cache/
+.dmypy.json
+dmypy.json
+# Idea
+.idea/
+
+### Serverless ###
+.serverless
+
+### node ###
+node_modules/
+
+### docker volume ###
+docker/*/volume

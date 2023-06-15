@@ -1,0 +1,3 @@
+services:
+  Demo:
+    path: demo
