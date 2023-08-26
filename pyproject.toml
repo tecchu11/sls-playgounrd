@@ -2,4 +2,4 @@
 # See https://beta.ruff.rs/docs/rules/
 select = ["E", "F", "I", "N", "UP", "B", "COM"]
 
-target-version = "py39"
+target-version = "py311"
